@@ -22,7 +22,8 @@ public class Expense extends BaseModel {
 	private BigDecimal expenseValue;
 	private LocalDate date;	
 	private LocalDate deadline;
-	private String installment;
+	private Integer installment;
+	private Integer installmentsNumber;
 	@ManyToOne(cascade = CascadeType.ALL)
 	private Origin origin;
 	@ManyToOne(cascade = CascadeType.ALL)

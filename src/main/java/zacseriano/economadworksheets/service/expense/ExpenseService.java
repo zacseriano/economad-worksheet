@@ -4,15 +4,19 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -23,13 +27,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
+import zacseriano.economadworksheets.domain.dto.PaymentTypeDto;
 import zacseriano.economadworksheets.domain.dto.StatisticsDto;
+import zacseriano.economadworksheets.domain.enums.PaymentTypeEnum;
 import zacseriano.economadworksheets.domain.enums.StatisticsTypeEnum;
 import zacseriano.economadworksheets.domain.form.ExpenseForm;
+import zacseriano.economadworksheets.domain.form.PaymentTypeForm;
 import zacseriano.economadworksheets.domain.mapper.ExpenseMapper;
 import zacseriano.economadworksheets.domain.model.Expense;
 import zacseriano.economadworksheets.domain.model.Origin;
@@ -37,6 +45,7 @@ import zacseriano.economadworksheets.domain.model.PaymentType;
 import zacseriano.economadworksheets.repository.ExpenseRepository;
 import zacseriano.economadworksheets.service.origin.OriginService;
 import zacseriano.economadworksheets.service.paymentType.PaymentTypeService;
+import zacseriano.economadworksheets.shared.utils.DateUtils;
 import zacseriano.economadworksheets.specification.builder.ExpenseSpecificationBuilder;
 import zacseriano.economadworksheets.specification.filter.ExpenseFilter;
 
@@ -44,11 +53,10 @@ import zacseriano.economadworksheets.specification.filter.ExpenseFilter;
 @Transactional
 @RequiredArgsConstructor
 public class ExpenseService {
-	final static int RADIX = 10;
 	@Autowired
-	private ExpenseRepository expenseRepository;
+	private ExpenseRepository repository;
 	@Autowired
-	private ExpenseMapper expenseMapper;
+	private ExpenseMapper mapper;
 	@Autowired
 	private OriginService originService;
 	@Autowired
@@ -56,7 +64,7 @@ public class ExpenseService {
 	
 	public Page<Expense> listAll(ExpenseFilter filter, Pageable paginacao) {		
 		Specification<Expense> spec = ExpenseSpecificationBuilder.builder(filter);
-		return expenseRepository.findAll(spec, paginacao);
+		return repository.findAll(spec, paginacao);
 	}
 	
 	public List<StatisticsDto> listStatisticsByMonth(String bilingMonth, StatisticsTypeEnum statisticsType) {
@@ -70,7 +78,7 @@ public class ExpenseService {
 			throw new ValidationException(String.format("Please insert Month Salary information before moving forward."));
 		}
 		
-		List<Expense> expenses = expenseRepository.findAll(spec);		
+		List<Expense> expenses = repository.findAll(spec);		
 		Map<String, BigDecimal> mapExpenseStatistics = createExpensesStatisticsMap(expenses, statisticsType, Expense.getSalary());
 		List<StatisticsDto> statistics = mapExpenseStatistics.entrySet().stream()
 				.map(entry -> new StatisticsDto(entry.getKey(), entry.getValue())).collect(Collectors.toList());
@@ -84,21 +92,21 @@ public class ExpenseService {
 		if(Expense.getSalary() == null) {
 			throw new ValidationException(String.format("Please insert Month Salary information before moving forward."));
 		}
-		List<Expense> expenses = expenseRepository.findAll(spec);		
+		List<Expense> expenses = repository.findAll(spec);		
 		return generateWorksheet(expenses);
 	}
 	
 	public Expense create(ExpenseForm form) {
-		Expense expense = expenseMapper.toModel(form);
+		Expense expense = mapper.toModel(form);
 		Origin origin = originService.findByNameOrCreate(form.getOriginName());
 		expense.setOrigin(origin);
 		PaymentType paymentType = paymentTypeService.findByName(form.getPaymentTypeName());
 		expense.setPaymentType(paymentType);
-		expense.setInstallment(createInstallment(form.getInstallmentNumber()));		
-		if(form.getInstallmentNumber() > 1) {
-			createRemainingExpenseInstallments(expense);
-		}		
-		expense = expenseRepository.save(expense);
+//		expense.setInstallment(createInstallment(form.getInstallmentNumber()));		
+//		if(form.getInstallmentNumber() > 1) {
+//			createRemainingExpenseInstallments(expense);
+//		}		
+		expense = repository.save(expense);
 		return expense;
 	}
 	
@@ -106,7 +114,7 @@ public class ExpenseService {
 		ExpenseFilter filter = ExpenseFilter.builder().initialDate(initialDate).finalDate(finalDate).build();
 		BigDecimal index = BigDecimal.ZERO;
 		Specification<Expense> spec = ExpenseSpecificationBuilder.builder(filter);
-		List<Expense> expenses = expenseRepository.findAll(spec);
+		List<Expense> expenses = repository.findAll(spec);
 		if(!expenses.isEmpty()) {
 			BigDecimal daysNumber = new BigDecimal(ChronoUnit.DAYS.between(initialDate, finalDate));
 			BigDecimal totalValue = expenses.stream().map(Expense::getExpenseValue).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -114,7 +122,7 @@ public class ExpenseService {
 		}		
 		return index;
 	}
-	
+
 	private LocalDate findDateByMonthDescription(String bilingMonth) {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM/yyyy", Locale.ENGLISH);
         return LocalDate.parse(bilingMonth.toUpperCase(), formatter);
@@ -157,30 +165,15 @@ public class ExpenseService {
 		return paymentTypeTotal;
 	}
 
-	private String createNextInstallment(String parcela) {
-		String[] parts = parcela.split("/");
-		int installmentInt = Integer.parseInt(parts[0]);
-		installmentInt++;
-		String installmentNumber = Integer.toString(installmentInt);
-		String newInstallment = installmentNumber + "/" + parts[1];
-		return newInstallment;
-	}
-	
-	private void createRemainingExpenseInstallments(Expense expense) {
-		String installment = expense.getInstallment();
-		String[] parts = installment.split("/");
-		int quantity = Integer.parseInt(parts[1]);
+	private void createRemainingExpenseInstallments(Expense expense) {		
 		LocalDate deadline = expense.getDeadline();
-		Expense actualExpense = expense;
-		for(int i = quantity ; i > 1 ; i--) {
+		for(int i = 2; i <= expense.getInstallmentsNumber(); i++) {
 			Expense newExpense = new Expense();
-			BeanUtils.copyProperties(actualExpense, newExpense, "id");
-			installment = createNextInstallment(installment);
-			newExpense.setInstallment(installment);
+			BeanUtils.copyProperties(expense, newExpense, "id");			
+			newExpense.setInstallment(i);
 			deadline = deadline.plusMonths(1);
-			newExpense.setDeadline(deadline);	
-			actualExpense = newExpense;
-			expenseRepository.save(newExpense);
+			newExpense.setDeadline(deadline);
+			repository.save(newExpense);
 		}				
 	}
 	
@@ -212,6 +205,136 @@ public class ExpenseService {
 	        e.printStackTrace();
 	        return null;
 	    }
+	}
+
+	public Boolean processWorksheet(MultipartFile file) throws IOException {
+        Workbook workbook = new XSSFWorkbook(file.getInputStream());
+        Sheet sheet = workbook.getSheetAt(0);
+        List<String> errors = new ArrayList<>();
+    	OUTER_PAYMENT:
+    	for(Row row : sheet) {
+    		try {
+    			if(row == null) {
+					break;
+				}
+				if (row.getRowNum() == 0) {
+				    continue;
+				}
+				Integer cellNumber = Integer.valueOf(8);
+				PaymentTypeForm paymentForm = new PaymentTypeForm();
+				while (cellNumber < 11) {
+					paymentForm = setPaymentTypeFields(paymentForm, row, cellNumber);
+					if(paymentForm == null) {
+						continue OUTER_PAYMENT;
+					}
+					cellNumber++;
+				}			
+				paymentTypeService.create(paymentForm);			
+			} catch (Exception e) {
+				errors.add(String.format("Payment Line %d: ", row.getRowNum() + 1) + e.getMessage());
+				continue;
+			}
+    	}
+    	OUTER_EXPENSE:
+        for (Row row : sheet) {
+        	List<PaymentTypeDto> payments = paymentTypeService.listAll();
+        	if (row.getRowNum() == 0) {
+                continue;
+            }        	
+        	try {				
+        		Integer cellNumber = Integer.valueOf(0);
+				Expense expense = new Expense();
+				while (cellNumber < 8) {
+					expense = setExpenseFields(expense, row, cellNumber);
+					if(expense == null) {
+						continue OUTER_EXPENSE;
+					}
+					cellNumber++;
+				}
+				repository.saveAndFlush(expense);
+				if(expense.getInstallmentsNumber() > 1) {
+					createRemainingExpenseInstallments(expense);
+				}				
+			} catch (Exception e) {			
+        		errors.add(String.format("Expense Line %d: ", row.getRowNum() + 1) + e.getMessage());
+        		continue;
+			}
+        }
+        workbook.close();
+        if(!errors.isEmpty()) {
+        	StringBuilder errorMessage = new StringBuilder();
+        	errorMessage.append("\n");
+            for (String error : errors) {
+                errorMessage.append(error).append("\n");
+            }
+        	throw new ValidationException("We got some problems with the worksheet: " + errorMessage.toString());
+        }                   
+		return true;
+	}
+	
+	private Expense setExpenseFields(Expense expense, Row row, Integer cellNumber) {
+		Cell cell = row.getCell(cellNumber);
+		if(cell == null || cell.toString().isBlank()) {
+			return null;
+		}
+		switch (cellNumber) {
+			case 0:
+				expense.setDate(DateUtils.stringToLocalDate(cell.toString()));
+				break;
+			case 1:
+				expense.setOrigin(originService.findByNameOrCreate(cell.toString()));
+				break;
+			case 2:
+				expense.setDescription(cell.toString());
+				break;
+			case 3:
+				expense.setExpenseValue(new BigDecimal(cell.toString()));
+				break;
+			case 4:
+				expense.setDeadline(DateUtils.stringToLocalDate(cell.toString()));
+				break;
+			case 5:
+				expense.setPaymentType(paymentTypeService.findByName(cell.toString()));
+				break;
+			case 6:
+				Float installmentFloat = Float.parseFloat(cell.toString());
+				Integer installment = (int) Math.round(installmentFloat);
+				expense.setInstallment(installment);
+				break;
+			case 7:
+				Float installmentsFloat = Float.parseFloat(cell.toString());
+				Integer installmentsNumber = (int) Math.round(installmentsFloat);
+				expense.setInstallmentsNumber(installmentsNumber);
+			default:
+				break;
+		}
+		
+		return expense;
+	}
+
+	private PaymentTypeForm setPaymentTypeFields(PaymentTypeForm form, Row row, Integer cellNumber) {
+		Cell cell = row.getCell(cellNumber);
+		if(cell == null) {
+			return null;
+		}
+		switch(cellNumber) {			
+			case 8 :
+				String paymentTypeName = cell.toString();
+				form.setName(paymentTypeName);				
+				break;
+			case 9 :
+				PaymentTypeEnum paymentTypeEnum = PaymentTypeEnum.valueOf(cell.toString());
+				form.setPaymentTypeEnum(paymentTypeEnum);				
+				break;
+			case 10 :
+				Float billingDateFloat = Float.parseFloat(cell.toString());
+				Integer intBillingDate = (int) Math.round(billingDateFloat);
+				form.setBillingDate(intBillingDate);
+				break;
+			default:
+				break;	
+		}						
+		return form;
 	}
 
 }

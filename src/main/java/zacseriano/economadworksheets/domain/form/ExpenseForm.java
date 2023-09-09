@@ -23,7 +23,8 @@ public class ExpenseForm {
 	private String date;
 	@StringAsLocalDateValid
 	private String deadline;
-	private Integer installmentNumber;
+	private Integer installment;
+	private Integer installmentsNumber;
 	private String originName;
 	private String paymentTypeName;
 }

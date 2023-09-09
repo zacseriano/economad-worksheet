@@ -1,6 +1,5 @@
 package zacseriano.economadworksheets.domain.model;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import jakarta.persistence.CascadeType;
@@ -25,7 +24,7 @@ public class PaymentType extends BaseModel {
 	private String name;
 	@Enumerated(EnumType.STRING)
 	private PaymentTypeEnum paymentTypeEnum;
-	private LocalDate bilingDate;
+	private Integer billingDate;
 	@OneToMany(mappedBy = "paymentType", cascade = CascadeType.ALL)
 	private List<Expense> expenses;
 }

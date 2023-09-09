@@ -16,9 +16,9 @@ import zacseriano.economadworksheets.specification.common.GenericSpecification;
 import zacseriano.economadworksheets.specification.common.QueryOperator;
 
 public class ExpenseSpecification extends GenericSpecification<Expense> {
-	public static Specification<Expense> naoDeletados() {
-        return createSpecification(createFilter(QueryOperator.EQUAL, "deleted", Boolean.FALSE));
-    }
+	public static Specification<Expense> initialize(){
+		return Specification.where((root, query, criteriaBuilder) -> criteriaBuilder.conjunction());
+	}
 	
 	public static Specification<Expense> paymentTypeName(String paymentTypeName) {
     	return (Root<Expense> root, CriteriaQuery<?> query, CriteriaBuilder builder) -> {
@@ -39,6 +39,7 @@ public class ExpenseSpecification extends GenericSpecification<Expense> {
 	public static Specification<Expense> initialDate(LocalDate initialDate) {
 		return createSpecification(createFilter(QueryOperator.GREATER_THAN_OR_EQUAL, "date", initialDate));
 	}
+	
 	public static Specification<Expense> finalDate(LocalDate finalDate) {
 		return createSpecification(createFilter(QueryOperator.LESS_THAN_OR_EQUAL, "date", finalDate));
 	}

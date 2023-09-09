@@ -1,8 +1,6 @@
 package zacseriano.economadworksheets.specification.builder;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.springframework.data.jpa.domain.Specification;
 
@@ -12,61 +10,40 @@ import zacseriano.economadworksheets.specification.spec.ExpenseSpecification;
 
 public class ExpenseSpecificationBuilder {
 	public static Specification<Expense> builder(ExpenseFilter filter) {
-		var specification = ExpenseSpecification.naoDeletados();
-		Map<Specification<Expense>, String> specsMap = new HashMap<Specification<Expense>, String>();
+		var specification = ExpenseSpecification.initialize();
+		specification = paymentTypeNameFilter(filter.getPaymentTypeName(), specification);
+		specification = originNameFilter(filter.getOriginName(), specification);
+		specification = initialDateFilter(filter.getInitialDate(), specification);
+		specification = finalDateFilter(filter.getFinalDate(), specification);
+		return specification;
+	}
 
-		paymentTypeNameFilter(filter.getPaymentTypeName(), specsMap);
-		originNameFilter(filter.getOriginName(), specsMap);
-		initialDateFilter(filter.getInitialDate(), specsMap);
-		finalDateFilter(filter.getFinalDate(), specsMap);
-		
-		var specifications = specsMap.keySet();
-		for (var spec : specifications) {
-			var conditional = specsMap.get(spec);
-			if (conditional.equals("and")) {
-				specification = specification.and(spec);
-			} else {
-				specification = specification.or(spec);
-			}
+	private static Specification<Expense> initialDateFilter(LocalDate initialDate, Specification<Expense> specification) {
+		if(initialDate != null) {
+			return ExpenseSpecification.verifySpecification(specification, ExpenseSpecification.initialDate(initialDate), "and");
 		}
 		return specification;
 	}
 
-	private static void initialDateFilter(LocalDate initialDate, Map<Specification<Expense>, String> specs) {
-		if(initialDate != null) {
-			var spec = ExpenseSpecification.initialDate(initialDate);
-			if (spec != null) {
-				specs.put(spec, "and");
-			}
-		}		
-	}
-
-	private static void finalDateFilter(LocalDate finalDate, Map<Specification<Expense>, String> specs) {
+	private static Specification<Expense> finalDateFilter(LocalDate finalDate, Specification<Expense> specification) {
 		if(finalDate != null) {
-			var spec = ExpenseSpecification.finalDate(finalDate);
-			if (spec != null) {
-				specs.put(spec, "and");
-			}
+			return ExpenseSpecification.verifySpecification(specification, ExpenseSpecification.finalDate(finalDate), "and");
 		}
+		return specification;
 	}
 
-	private static void originNameFilter(String originName, Map<Specification<Expense>, String> specs) {
+	private static Specification<Expense> originNameFilter(String originName, Specification<Expense> specification) {
 		if (originName != null) {
-			var spec = ExpenseSpecification.originName(originName);
-			if (spec != null) {
-				specs.put(spec, "and");
-			}
+			return ExpenseSpecification.verifySpecification(specification, ExpenseSpecification.originName(originName), "and");
 		}
-		
+		return specification;
 	}
 
-	private static void paymentTypeNameFilter(String paymentTypeName, Map<Specification<Expense>, String> specs) {
+	private static Specification<Expense> paymentTypeNameFilter(String paymentTypeName, Specification<Expense> specification) {
 		if (paymentTypeName != null) {
-			var spec = ExpenseSpecification.paymentTypeName(paymentTypeName);
-			if (spec != null) {
-				specs.put(spec, "and");
-			}
+			return ExpenseSpecification.verifySpecification(specification, ExpenseSpecification.paymentTypeName(paymentTypeName), "and");
 		}
+		return specification;
 	}
 
 }

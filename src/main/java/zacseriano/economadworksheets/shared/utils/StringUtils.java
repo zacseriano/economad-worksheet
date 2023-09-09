@@ -14,10 +14,9 @@ public class StringUtils {
     public static String normalize(String str) {
         String nfdNormalizedString = Normalizer.normalize(str, Normalizer.Form.NFD);
         Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-
-        return pattern.matcher(nfdNormalizedString).replaceAll("");
+        return pattern.matcher(nfdNormalizedString).replaceAll("").toLowerCase();
     }
-    
+
 	public static String[] formatString(String s) {
 		String result = s.replaceAll("\\s+", "");
 		String[] formattedData = result.split(Pattern.quote(","));

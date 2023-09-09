@@ -19,10 +19,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.validation.Valid;
 import zacseriano.economadworksheets.domain.dto.ExpenseDto;
+import zacseriano.economadworksheets.domain.dto.PaymentTypeDto;
 import zacseriano.economadworksheets.domain.dto.StatisticsDto;
 import zacseriano.economadworksheets.domain.enums.StatisticsTypeEnum;
 import zacseriano.economadworksheets.domain.form.ExpenseForm;
@@ -31,6 +33,7 @@ import zacseriano.economadworksheets.domain.model.Expense;
 import zacseriano.economadworksheets.domain.model.Origin;
 import zacseriano.economadworksheets.service.expense.ExpenseService;
 import zacseriano.economadworksheets.service.origin.OriginService;
+import zacseriano.economadworksheets.service.paymentType.PaymentTypeService;
 import zacseriano.economadworksheets.specification.filter.ExpenseFilter;
 
 @RestController
@@ -42,6 +45,8 @@ public class ExpenseController {
 	private ExpenseMapper mapper;
 	@Autowired
 	private OriginService originService;
+	@Autowired
+	private PaymentTypeService paymentTypeService;
 
 	@GetMapping
 	public ResponseEntity<Page<ExpenseDto>> listAll(
@@ -77,10 +82,17 @@ public class ExpenseController {
                 .body(worksheetBytes);
     }
 	
-	@GetMapping("/list-orgins")
-	public ResponseEntity<List<String>> listarOrigens() {
+	@GetMapping("/list-origins")
+	public ResponseEntity<List<String>> listOrigins() {
 		List<Origin> origins = originService.listAll();
 		List<String> names = origins.stream().map(r -> r.getName()).toList();		
+		return ResponseEntity.ok(names);
+	}
+	
+	@GetMapping("/list-payment-types")
+	public ResponseEntity<List<String>> listPaymentTypes() {
+		List<PaymentTypeDto> paymentTypes = paymentTypeService.listAll();
+		List<String> names = paymentTypes.stream().map(r -> r.getName()).toList();		
 		return ResponseEntity.ok(names);
 	}
 	
@@ -96,5 +108,10 @@ public class ExpenseController {
 			@RequestParam(required = true) LocalDate finalDate) {		
 		return ResponseEntity.ok(service.calculateRelativeDailyIndex(initialDate, finalDate));
 	}
+	
+	@PostMapping("/process-input-worksheet")
+    public ResponseEntity<Boolean> processInputWorksheet(@RequestParam("file") MultipartFile file) throws IOException {
+        return ResponseEntity.ok(service.processWorksheet(file));
+    }
 
 }

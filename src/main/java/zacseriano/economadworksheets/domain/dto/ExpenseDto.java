@@ -16,7 +16,8 @@ public class ExpenseDto {
 	private BigDecimal expenseValue;
 	private LocalDate date;	
 	private LocalDate deadline;
-	private String installment;
+	private Integer installment;
+	private Integer installmentsNumber;
 	private String origin;
 	private String paymentType;
 }

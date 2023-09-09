@@ -1,6 +1,7 @@
 package zacseriano.economadworksheets.service.origin;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -14,6 +15,7 @@ import zacseriano.economadworksheets.domain.form.OriginForm;
 import zacseriano.economadworksheets.domain.mapper.OriginMapper;
 import zacseriano.economadworksheets.domain.model.Origin;
 import zacseriano.economadworksheets.repository.OriginRepository;
+import zacseriano.economadworksheets.shared.utils.StringUtils;
 
 @Service
 @Transactional
@@ -37,28 +39,29 @@ public class OriginService {
 	}
 	
 	public Origin findOrCreate(OriginForm form) {
-		Origin origin = repository.findByName(form.getName());		
-		if (origin == null) {
-			validator.validarForm(form);
-			origin = create(form);			
+		Optional<Origin> optOrigin = repository.findByName(form.getName());		
+		if (optOrigin.isEmpty()) {
+			validator.validateForm(form);
+			return create(form);			
 		}		
-		return origin;
+		return optOrigin.get();
 	}
 	
 	public Origin findByName(String name) {
-		Origin origin = repository.findByName(name);		
-		if (origin == null) {
+		Optional<Origin> optOrigin = repository.findByName(name);		
+		if (optOrigin.isEmpty()) {
 			throw new ValidationException(String.format("Origin with name %s not found.", name));		
 		}		
-		return origin;
+		return optOrigin.get();
 	}
 	
 	public Origin findByNameOrCreate(String name) {
-		Origin origin = repository.findByName(name);		
-		if (origin == null) {
+		String normalizedName = StringUtils.normalize(name);
+		Optional<Origin> optOrigin = repository.findByName(normalizedName);		
+		if (optOrigin.isEmpty()) {
 			OriginForm form = OriginForm.builder().name(name).build();
 			return create(form);
 		}		
-		return origin;
+		return optOrigin.get();
 	}
 }

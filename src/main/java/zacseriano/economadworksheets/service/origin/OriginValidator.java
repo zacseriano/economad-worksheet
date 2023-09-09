@@ -9,7 +9,7 @@ import zacseriano.economadworksheets.domain.form.OriginForm;
 @Component
 @RequiredArgsConstructor
 public class OriginValidator {
-	public void validarForm (OriginForm form) {
+	public void validateForm (OriginForm form) {
 		if (form.getName().isBlank()) {
 			throw new ValidationException("Insert Origin's name");
 		}
