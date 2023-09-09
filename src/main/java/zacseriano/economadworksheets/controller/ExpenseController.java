@@ -61,10 +61,11 @@ public class ExpenseController {
 
 	@GetMapping("/statistics")
 	public ResponseEntity<List<StatisticsDto>> statistics(
-			@RequestParam(required = true) String billingMonth,
+			@RequestParam(required = true) Integer month,
+			@RequestParam(required = true) Integer year,
 			@RequestParam(required = true) StatisticsTypeEnum statisticsType) {
 
-		List<StatisticsDto> statisticsDto = service.listStatisticsByMonth(billingMonth, statisticsType);
+		List<StatisticsDto> statisticsDto = service.listStatisticsByMonth(month, year, statisticsType);
 
 		return ResponseEntity.ok(statisticsDto);
 	}
@@ -96,7 +97,7 @@ public class ExpenseController {
 		return ResponseEntity.ok(names);
 	}
 	
-	@PostMapping("/create")
+	@PostMapping
 	public ResponseEntity<ExpenseDto> create(@RequestBody @Valid ExpenseForm form, UriComponentsBuilder uriBuilder) {
 		Expense expense = service.create(form);
 		ExpenseDto expenseDto = mapper.toDto(expense);

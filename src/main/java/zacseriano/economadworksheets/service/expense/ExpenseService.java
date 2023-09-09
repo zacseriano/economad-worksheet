@@ -62,8 +62,8 @@ public class ExpenseService {
 		return repository.findAll(spec, paginacao);
 	}
 	
-	public List<StatisticsDto> listStatisticsByMonth(String bilingMonth, StatisticsTypeEnum statisticsType) {
-		LocalDate deadline = LocalDate.now();
+	public List<StatisticsDto> listStatisticsByMonth(Integer month, Integer year, StatisticsTypeEnum statisticsType) {
+		LocalDate deadline = LocalDate.of(year, month, 1);
 		LocalDate initialDate = deadline.withDayOfMonth(1);
 		LocalDate finalDate = deadline.withDayOfMonth(deadline.lengthOfMonth());
 		ExpenseFilter filter = ExpenseFilter.builder().initialDate(initialDate).finalDate(finalDate).build();
@@ -97,11 +97,11 @@ public class ExpenseService {
 		expense.setOrigin(origin);
 		PaymentType paymentType = paymentTypeService.findByName(form.getPaymentTypeName());
 		expense.setPaymentType(paymentType);
-//		expense.setInstallment(createInstallment(form.getInstallmentNumber()));		
-//		if(form.getInstallmentNumber() > 1) {
-//			createRemainingExpenseInstallments(expense);
-//		}		
+		expense.setInstallment(1);
 		expense = repository.save(expense);
+		if(expense.getInstallmentsNumber() > 1) {
+			createRemainingExpenseInstallments(expense);
+		}		
 		return expense;
 	}
 	

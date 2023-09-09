@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Expense extends BaseModel {
-	private static BigDecimal salary;
+	private static BigDecimal salary = new BigDecimal(5500);
 	private String description;
 	private BigDecimal expenseValue;
 	private LocalDate date;	

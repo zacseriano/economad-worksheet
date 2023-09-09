@@ -17,13 +17,12 @@ import zacseriano.economadworksheets.shared.validator.data.StringAsLocalDateVali
 public class ExpenseForm {
 	@NotBlank
 	private String description;
-	private BigDecimal value;
+	private BigDecimal expenseValue;
 	@StringAsLocalDateValid
 	@NotNull
 	private String date;
 	@StringAsLocalDateValid
 	private String deadline;
-	private Integer installment;
 	private Integer installmentsNumber;
 	private String originName;
 	private String paymentTypeName;

@@ -5,14 +5,13 @@ import java.time.LocalDate;
 import org.springframework.data.jpa.domain.Specification;
 
 import zacseriano.economadworksheets.domain.model.Expense;
-import zacseriano.economadworksheets.shared.utils.DateUtils;
 import zacseriano.economadworksheets.specification.filter.ExpenseFilter;
 import zacseriano.economadworksheets.specification.spec.ExpenseSpecification;
 
 public class ExpenseSpecificationBuilder {
 	public static Specification<Expense> builder(ExpenseFilter filter) {
 		var specification = ExpenseSpecification.initialize();
-		specification = deadlineMonthDescription(filter.getMonthDescription(), specification);
+		specification = deadlineMonth(filter.getMonth(), filter.getYear(), specification);
 		specification = paymentTypeNameFilter(filter.getPaymentTypeName(), specification);
 		specification = originNameFilter(filter.getOriginName(), specification);
 		specification = initialDateFilter(filter.getInitialDate(), specification);
@@ -20,11 +19,10 @@ public class ExpenseSpecificationBuilder {
 		return specification;
 	}
 	
-	private static Specification<Expense> deadlineMonthDescription(String monthDescription, Specification<Expense> specification) {
-		if(monthDescription != null) {
-			LocalDate deadlineMonth = DateUtils.monthDescriptionToDate(monthDescription);
-			LocalDate initialDeadline = deadlineMonth.withDayOfMonth(1);
-			LocalDate finalDeadline = deadlineMonth.withDayOfMonth(deadlineMonth.lengthOfMonth());
+	private static Specification<Expense> deadlineMonth(Integer month, Integer year, Specification<Expense> specification) {
+		if(month != null && year != null) {
+			LocalDate initialDeadline = LocalDate.of(year, month, 1);
+			LocalDate finalDeadline = initialDeadline.withDayOfMonth(initialDeadline.lengthOfMonth());
 			specification = ExpenseSpecification.verifySpecification(specification, ExpenseSpecification.initialDeadline(initialDeadline), "and");
 			return ExpenseSpecification.verifySpecification(specification, ExpenseSpecification.finalDeadline(finalDeadline), "and");
 		}
