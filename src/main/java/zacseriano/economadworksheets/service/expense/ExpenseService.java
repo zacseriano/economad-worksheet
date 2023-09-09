@@ -4,16 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.Normalizer;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -32,7 +28,6 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
-import zacseriano.economadworksheets.domain.dto.PaymentTypeDto;
 import zacseriano.economadworksheets.domain.dto.StatisticsDto;
 import zacseriano.economadworksheets.domain.enums.PaymentTypeEnum;
 import zacseriano.economadworksheets.domain.enums.StatisticsTypeEnum;
@@ -68,7 +63,7 @@ public class ExpenseService {
 	}
 	
 	public List<StatisticsDto> listStatisticsByMonth(String bilingMonth, StatisticsTypeEnum statisticsType) {
-		LocalDate deadline = findDateByMonthDescription(bilingMonth);
+		LocalDate deadline = LocalDate.now();
 		LocalDate initialDate = deadline.withDayOfMonth(1);
 		LocalDate finalDate = deadline.withDayOfMonth(deadline.lengthOfMonth());
 		ExpenseFilter filter = ExpenseFilter.builder().initialDate(initialDate).finalDate(finalDate).build();
@@ -121,17 +116,6 @@ public class ExpenseService {
 			index = totalValue.divide(daysNumber, 2, RoundingMode.CEILING);
 		}		
 		return index;
-	}
-
-	private LocalDate findDateByMonthDescription(String bilingMonth) {
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM/yyyy", Locale.ENGLISH);
-        return LocalDate.parse(bilingMonth.toUpperCase(), formatter);
-	}
-	
-	private String createInstallment(Integer installmentNumber) {
-		StringBuilder sb = new StringBuilder();
-	    sb.append("1/").append(installmentNumber);
-		return sb.toString();
 	}
 
 	private Map<String, BigDecimal> createExpensesStatisticsMap(List<Expense> expenses, StatisticsTypeEnum statisticsType, BigDecimal salary) {		
@@ -237,7 +221,6 @@ public class ExpenseService {
     	}
     	OUTER_EXPENSE:
         for (Row row : sheet) {
-        	List<PaymentTypeDto> payments = paymentTypeService.listAll();
         	if (row.getRowNum() == 0) {
                 continue;
             }        	

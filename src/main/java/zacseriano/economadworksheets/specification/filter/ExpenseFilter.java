@@ -16,6 +16,7 @@ import lombok.Setter;
 public class ExpenseFilter {
 	private String paymentTypeName; 
 	private String originName;
+	private String monthDescription;
 	private LocalDate initialDate;
 	private LocalDate finalDate;
 }

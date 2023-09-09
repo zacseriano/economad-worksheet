@@ -43,4 +43,12 @@ public class ExpenseSpecification extends GenericSpecification<Expense> {
 	public static Specification<Expense> finalDate(LocalDate finalDate) {
 		return createSpecification(createFilter(QueryOperator.LESS_THAN_OR_EQUAL, "date", finalDate));
 	}
+	
+	public static Specification<Expense> initialDeadline(LocalDate initialDeadline) {
+		return createSpecification(createFilter(QueryOperator.GREATER_THAN_OR_EQUAL, "date", initialDeadline));
+	}
+	
+	public static Specification<Expense> finalDeadline(LocalDate finalDeadline) {
+		return createSpecification(createFilter(QueryOperator.LESS_THAN_OR_EQUAL, "date", finalDeadline));
+	}
 }

@@ -51,9 +51,9 @@ public class ExpenseController {
 	@GetMapping
 	public ResponseEntity<Page<ExpenseDto>> listAll(
 			@PageableDefault(size = 20, sort = "date", direction = Sort.Direction.DESC) Pageable pageable, 
-			ExpenseFilter filtro) {
+			ExpenseFilter filter) {
 
-		Page<Expense> expenses = service.listAll(filtro, pageable);
+		Page<Expense> expenses = service.listAll(filter, pageable);
 		Page<ExpenseDto> expensesDto = expenses.map(this.mapper::toDto);
 
 		return ResponseEntity.ok(expensesDto);
